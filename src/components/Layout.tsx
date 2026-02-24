@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Zap, 
   Globe, 
   Menu, 
   X, 
@@ -34,6 +33,8 @@ import { AdBanner } from './AdBanner';
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+import { LogoIcon } from './LogoIcon';
 
 export function Layout({ children }: LayoutProps) {
   const { language, setLanguage, t } = useLanguage();
@@ -176,8 +177,8 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-bg-darker shadow-lg shadow-brand-primary/20 group-hover:scale-110 transition-transform">
-                <Zap size={20} fill="currentColor" />
+              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform border border-white/10">
+                <LogoIcon size={24} />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">Converter Tudo</span>
             </Link>
@@ -336,8 +337,8 @@ export function Layout({ children }: LayoutProps) {
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 mb-24">
             <div className="col-span-2 lg:col-span-2">
               <Link to="/" className="flex items-center gap-3 mb-8 group w-fit">
-                <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center text-bg-darker group-hover:scale-110 transition-transform">
-                  <Zap size={20} fill="currentColor" />
+                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform border border-white/10">
+                  <LogoIcon size={24} />
                 </div>
                 <span className="text-2xl font-bold tracking-tight text-white">Converter Tudo</span>
               </Link>

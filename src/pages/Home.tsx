@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Zap, 
+  Zap,
   ShieldCheck, 
   Globe, 
   Download,
@@ -12,6 +12,7 @@ import {
   ArrowRight,
   Search
 } from 'lucide-react';
+import { LogoIcon } from '../components/LogoIcon';
 import { FileDropzone, FileDropzoneHandle } from '../components/FileDropzone';
 import { CategoryCard } from '../components/CategoryCard';
 import { CATEGORIES } from '../constants';
@@ -61,7 +62,7 @@ export default function Home() {
               transition={{ duration: 0.6 }}
             >
               <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-primary/10 text-brand-primary text-xs font-bold uppercase tracking-widest mb-8 border border-brand-primary/20">
-                <Zap size={14} />
+                <LogoIcon size={14} />
                 {t.hero.badge}
               </span>
               <h1 
