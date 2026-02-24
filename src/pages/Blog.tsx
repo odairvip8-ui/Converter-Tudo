@@ -21,6 +21,7 @@ interface BlogItem {
   intro: string;
   content: string;
   conclusion: string;
+  relatedLinks?: string[];
 }
 
 export default function Blog() {
@@ -140,6 +141,51 @@ export default function Blog() {
                       <div className="space-y-4">
                         <h4 className="text-sm font-black text-brand-primary uppercase tracking-widest">Conclusão</h4>
                         <p className="text-slate-300 leading-relaxed italic">{item.conclusion}</p>
+                      </div>
+
+                      {/* Related Links */}
+                {item.relatedLinks && item.relatedLinks.length > 0 && (
+                  <div className="mt-8 pt-8 border-t border-gray-100">
+                    <h4 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wider">
+                      {t.pages.blog.relatedArticles}
+                    </h4>
+                    <div className="flex flex-wrap gap-3">
+                      {item.relatedLinks.map((link, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            const targetItem = t.pages.blog.items.find(i => i.title === link);
+                            if (targetItem) {
+                              setExpandedIndex(t.pages.blog.items.indexOf(targetItem));
+                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                            }
+                          }}
+                          className="px-4 py-2 bg-gray-50 hover:bg-blue-50 text-gray-700 hover:text-blue-600 rounded-full text-sm font-medium transition-colors border border-gray-100 hover:border-blue-100"
+                        >
+                          {link}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Donation Button */}
+                      <div className="pt-6 border-t border-white/5">
+                        <motion.a 
+                          href="https://www.paypal.com/donate?business=kutzoliver0%40gmail.com" 
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="inline-flex items-center justify-center gap-4 bg-[#003087] hover:bg-[#001f5b] text-white font-bold py-4 px-8 rounded-2xl transition-all shadow-lg shadow-blue-900/10 group/btn w-full sm:w-auto"
+                        >
+                          <img 
+                            src="https://www.paypalobjects.com/webstatic/mktg/logo/pp_cc_mark_111x69.jpg" 
+                            alt="PayPal"
+                            className="w-8 h-auto rounded-md"
+                          />
+                          <span>Faça uma Doação / Donate Now</span>
+                        </motion.a>
                       </div>
                     </div>
                   </motion.div>
