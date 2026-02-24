@@ -35,6 +35,7 @@ interface FileWithTarget {
   status: 'pending' | 'converting' | 'completed' | 'error';
   resultUrl?: string;
   availableFormats: string[];
+  progress: number;
 }
 
 export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({ onFilesSelected, selectedCategoryId }, ref) => {
@@ -97,7 +98,8 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
         file: f,
         targetFormat: available[0] || 'PDF',
         status: 'pending',
-        availableFormats: available
+        availableFormats: available,
+        progress: 0
       };
     });
     setFiles(prev => [...prev, ...newFiles]);
@@ -146,10 +148,13 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
     for (let i = 0; i < files.length; i++) {
       if (files[i].status === 'completed') continue;
 
-      setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'converting' } : f));
+      setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'converting', progress: 0 } : f));
       
-      // Artificial delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate progress
+      for (let p = 0; p <= 100; p += 10) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+        setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, progress: p } : f));
+      }
       
       setFiles(prev => prev.map((f, idx) => idx === i ? { 
         ...f, 
@@ -331,9 +336,18 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
                   )}
 
                   {item.status === 'converting' && (
-                    <div className="flex items-center gap-3 text-brand-primary bg-brand-primary/10 px-4 py-2 rounded-2xl border border-brand-primary/20">
-                      <Loader2 size={16} className="animate-spin" />
-                      <span className="text-xs font-bold uppercase tracking-wider">{t.dropzone.converting}</span>
+                    <div className="flex flex-col gap-2 w-full sm:w-48">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-brand-primary uppercase tracking-wider">{t.dropzone.converting}</span>
+                        <span className="text-[10px] font-bold text-brand-primary">{item.progress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                        <motion.div 
+                          initial={{ width: 0 }}
+                          animate={{ width: `${item.progress}%` }}
+                          className="h-full bg-brand-primary"
+                        />
+                      </div>
                     </div>
                   )}
 
