@@ -29,6 +29,7 @@ import {
   signInWithPhoneNumber
 } from 'firebase/auth';
 import { auth } from '../services/firebase';
+import { AdBanner } from './AdBanner';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -321,9 +322,13 @@ export function Layout({ children }: LayoutProps) {
         </AnimatePresence>
       </nav>
 
+      <AdBanner />
+
       <main className="flex-grow">
         {children}
       </main>
+
+      <AdBanner />
 
       {/* Footer */}
       <footer className="bg-bg-darker border-t border-white/5 pt-24 pb-12">
