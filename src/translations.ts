@@ -242,6 +242,14 @@ export const translations = {
       signUpBtn: "Create Account",
       noAccount: "Don't have an account? Sign up",
       hasAccount: "Already have an account? Sign in",
+      googleSignIn: "Continue with Google",
+      phoneSignIn: "Continue with Phone",
+      anonymousSignIn: "Continue as Guest",
+      phoneNumber: "Phone Number",
+      verificationCode: "Verification Code",
+      sendCode: "Send Code",
+      verifyCode: "Verify Code",
+      or: "or"
     },
     download: {
       title: "Get Converter Tudo",
@@ -533,6 +541,14 @@ export const translations = {
       signUpBtn: "Criar Conta",
       noAccount: "Não tem uma conta? Cadastre-se",
       hasAccount: "Já tem uma conta? Entre aqui",
+      googleSignIn: "Continuar com Google",
+      phoneSignIn: "Continuar com Telefone",
+      anonymousSignIn: "Continuar como Convidado",
+      phoneNumber: "Número de Telefone",
+      verificationCode: "Código de Verificação",
+      sendCode: "Enviar Código",
+      verifyCode: "Verificar Código",
+      or: "ou"
     },
     download: {
       title: "Obter Converter Tudo",
@@ -824,6 +840,14 @@ export const translations = {
       signUpBtn: "Crear Cuenta",
       noAccount: "¿No tienes cuenta? Regístrate",
       hasAccount: "¿Ya tienes cuenta? Inicia sesión",
+      googleSignIn: "Continuar con Google",
+      phoneSignIn: "Continuar con Teléfono",
+      anonymousSignIn: "Continuar como Invitado",
+      phoneNumber: "Número de Teléfono",
+      verificationCode: "Código de Verificación",
+      sendCode: "Enviar Código",
+      verifyCode: "Verificar Código",
+      or: "o"
     },
     download: {
       title: "Obtener Converter Tudo",

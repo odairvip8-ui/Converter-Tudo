@@ -10,10 +10,25 @@ import {
   ChevronDown,
   User,
   Lock,
-  Mail
+  Mail,
+  AlertCircle,
+  Smartphone,
+  Phone,
+  ArrowLeft
 } from 'lucide-react';
 import { cn } from '../utils';
 import { useLanguage } from '../LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signInAnonymously,
+  RecaptchaVerifier,
+  signInWithPhoneNumber
+} from 'firebase/auth';
+import { auth } from '../services/firebase';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -21,19 +36,21 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { language, setLanguage, t } = useLanguage();
+  const { user, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showLangDropdown, setShowLangDropdown] = useState(false);
-  const [user, setUser] = useState<{ email: string } | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phone, setPhone] = useState('');
+  const [verificationCode, setVerificationCode] = useState('');
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [showCodeInput, setShowCodeInput] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'email' | 'phone' | 'initial'>('initial');
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const location = useLocation();
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) setUser(JSON.parse(savedUser));
-  }, []);
 
   useEffect(() => {
     setIsMenuOpen(false);
@@ -42,33 +59,113 @@ export function Layout({ children }: LayoutProps) {
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+    setError(null);
+    setLoading(true);
+    
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        const userData = data.user || { email };
-        setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
-        setShowAuthModal(false);
-        setEmail('');
-        setPassword('');
+      if (authMode === 'login') {
+        await signInWithEmailAndPassword(auth, email, password);
       } else {
-        alert(data.error || 'Authentication failed');
+        await createUserWithEmailAndPassword(auth, email, password);
       }
-    } catch (err) {
+      setShowAuthModal(false);
+      setEmail('');
+      setPassword('');
+      setAuthMethod('initial');
+    } catch (err: any) {
       console.error(err);
-      alert('An error occurred');
+      setError(err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setShowAuthModal(false);
+      setAuthMethod('initial');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnonymousSignIn = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await signInAnonymously(auth);
+      setShowAuthModal(false);
+      setAuthMethod('initial');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRecaptcha = () => {
+    if (!(window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+        'size': 'invisible'
+      });
+    }
+  };
+
+  const handlePhoneSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      setupRecaptcha();
+      const appVerifier = (window as any).recaptchaVerifier;
+      const confirmation = await signInWithPhoneNumber(auth, phone, appVerifier);
+      setConfirmationResult(confirmation);
+      setShowCodeInput(true);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+      if ((window as any).recaptchaVerifier) {
+        (window as any).recaptchaVerifier.clear();
+        (window as any).recaptchaVerifier = null;
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    try {
+      await confirmationResult.confirm(verificationCode);
+      setShowAuthModal(false);
+      setPhone('');
+      setVerificationCode('');
+      setShowCodeInput(false);
+      setAuthMethod('initial');
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -307,67 +404,182 @@ export function Layout({ children }: LayoutProps) {
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="relative w-full max-w-md glass-dark rounded-[2.5rem] p-8 md:p-12 border border-white/10"
             >
+              <div id="recaptcha-container"></div>
+              
               <button 
-                onClick={() => setShowAuthModal(false)}
+                onClick={() => {
+                  setShowAuthModal(false);
+                  setAuthMethod('initial');
+                  setShowCodeInput(false);
+                }}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
 
+              {authMethod !== 'initial' && !showCodeInput && (
+                <button 
+                  onClick={() => setAuthMethod('initial')}
+                  className="absolute top-6 left-6 p-2 text-slate-400 hover:text-white transition-colors"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
+
               <div className="text-center mb-10">
                 <div className="w-16 h-16 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center mx-auto mb-6">
-                  <User size={32} />
+                  {authMethod === 'phone' ? <Smartphone size={32} /> : <User size={32} />}
                 </div>
                 <h2 className="text-3xl font-bold text-white mb-3">
-                  {authMode === 'login' ? t.auth.loginTitle : t.auth.signupTitle}
+                  {showCodeInput ? t.auth.verificationCode : authMethod === 'phone' ? t.auth.phoneSignIn : authMode === 'login' ? t.auth.loginTitle : t.auth.signupTitle}
                 </h2>
                 <p className="text-slate-400">
-                  {authMode === 'login' ? t.auth.loginDesc : t.auth.signupDesc}
+                  {showCodeInput ? t.auth.signupDesc : authMethod === 'phone' ? t.auth.signupDesc : authMode === 'login' ? t.auth.loginDesc : t.auth.signupDesc}
                 </p>
               </div>
 
-              <form onSubmit={handleAuth} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.email}</label>
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input 
-                      type="email" 
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
-                      placeholder="name@example.com"
-                    />
-                  </div>
+              {error && (
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-sm">
+                  <AlertCircle size={18} />
+                  <p className="break-words">{error}</p>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.password}</label>
-                  <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input 
-                      type="password" 
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
-                      placeholder="••••••••"
-                    />
-                  </div>
-                </div>
-                <button type="submit" className="w-full btn-primary py-4 text-lg">
-                  {authMode === 'login' ? t.auth.signInBtn : t.auth.signUpBtn}
-                </button>
-              </form>
+              )}
 
-              <div className="mt-8 text-center">
-                <button 
-                  onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
-                  className="text-slate-400 hover:text-brand-primary transition-colors font-medium"
-                >
-                  {authMode === 'login' ? t.auth.noAccount : t.auth.hasAccount}
-                </button>
-              </div>
+              {authMethod === 'initial' ? (
+                <div className="space-y-4">
+                  <button 
+                    onClick={() => setAuthMethod('email')}
+                    className="w-full flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-brand-primary group-hover:text-bg-darker transition-all">
+                      <Mail size={20} />
+                    </div>
+                    <span className="font-bold">{t.auth.email}</span>
+                  </button>
+
+                  <button 
+                    onClick={handleGoogleSignIn}
+                    className="w-full flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-brand-primary group-hover:text-bg-darker transition-all">
+                      <Globe size={20} />
+                    </div>
+                    <span className="font-bold">{t.auth.googleSignIn}</span>
+                  </button>
+
+                  <button 
+                    onClick={() => setAuthMethod('phone')}
+                    className="w-full flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-brand-primary group-hover:text-bg-darker transition-all">
+                      <Smartphone size={20} />
+                    </div>
+                    <span className="font-bold">{t.auth.phoneSignIn}</span>
+                  </button>
+
+                  <button 
+                    onClick={handleAnonymousSignIn}
+                    className="w-full flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-white/10 transition-all group"
+                  >
+                    <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:bg-brand-primary group-hover:text-bg-darker transition-all">
+                      <User size={20} />
+                    </div>
+                    <span className="font-bold">{t.auth.anonymousSignIn}</span>
+                  </button>
+                </div>
+              ) : authMethod === 'phone' ? (
+                <form onSubmit={showCodeInput ? handleVerifyCode : handlePhoneSignIn} className="space-y-6">
+                  {!showCodeInput ? (
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.phoneNumber}</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input 
+                          type="tel" 
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
+                          placeholder="+1 234 567 890"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.verificationCode}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input 
+                          type="text" 
+                          required
+                          value={verificationCode}
+                          onChange={(e) => setVerificationCode(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
+                          placeholder="123456"
+                        />
+                      </div>
+                    </div>
+                  )}
+                  <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {loading && <div className="w-5 h-5 border-2 border-bg-darker border-t-transparent rounded-full animate-spin" />}
+                    {showCodeInput ? t.auth.verifyCode : t.auth.sendCode}
+                  </button>
+                </form>
+              ) : (
+                <>
+                  <form onSubmit={handleAuth} className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.email}</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input 
+                          type="email" 
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
+                          placeholder="name@example.com"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-300 ml-1">{t.auth.password}</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input 
+                          type="password" 
+                          required
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-white outline-none focus:border-brand-primary/50 transition-all"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      type="submit" 
+                      disabled={loading}
+                      className="w-full btn-primary py-4 text-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {loading && <div className="w-5 h-5 border-2 border-bg-darker border-t-transparent rounded-full animate-spin" />}
+                      {authMode === 'login' ? t.auth.signInBtn : t.auth.signUpBtn}
+                    </button>
+                  </form>
+
+                  <div className="mt-8 text-center">
+                    <button 
+                      onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                      className="text-slate-400 hover:text-brand-primary transition-colors font-medium"
+                    >
+                      {authMode === 'login' ? t.auth.noAccount : t.auth.hasAccount}
+                    </button>
+                  </div>
+                </>
+              )}
             </motion.div>
           </div>
         )}
