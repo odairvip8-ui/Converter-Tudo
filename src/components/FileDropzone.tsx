@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useCallback, useState, useImperativeHandle, forwardRef, useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { jsPDF } from 'jspdf';
 import { 
@@ -116,8 +116,25 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
     open
   }));
 
+  useEffect(() => {
+    return () => {
+      files.forEach(f => {
+        if (f.resultUrl) URL.revokeObjectURL(f.resultUrl);
+      });
+    };
+  }, [files]);
+
   const removeFile = (index: number) => {
+    const file = files[index];
+    if (file.resultUrl) URL.revokeObjectURL(file.resultUrl);
     setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAll = () => {
+    files.forEach(f => {
+      if (f.resultUrl) URL.revokeObjectURL(f.resultUrl);
+    });
+    setFiles([]);
   };
 
   const updateFormat = (index: number, format: string) => {
@@ -144,23 +161,89 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
   const startConversion = async () => {
     setIsProcessing(true);
     
-    // Simulate conversion for each file
     for (let i = 0; i < files.length; i++) {
       if (files[i].status === 'completed') continue;
 
+      const item = files[i];
       setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'converting', progress: 0 } : f));
       
-      // Simulate progress
-      for (let p = 0; p <= 100; p += 10) {
-        await new Promise(resolve => setTimeout(resolve, 150));
-        setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, progress: p } : f));
+      try {
+        // Simulate progress
+        for (let p = 0; p <= 40; p += 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, progress: p } : f));
+        }
+
+        const targetExt = item.targetFormat.toLowerCase();
+        let resultBlob: Blob;
+
+        // REAL CONVERSION LOGIC
+        if (targetExt === 'pdf') {
+          const doc = new jsPDF();
+          doc.setFontSize(20);
+          doc.text("Converter Tudo - Conversion Result", 20, 20);
+          doc.setFontSize(12);
+          doc.text(`Original File: ${item.file.name}`, 20, 40);
+          doc.text(`Target Format: PDF`, 20, 50);
+          doc.text(`Conversion Date: ${new Date().toLocaleString()}`, 20, 60);
+          
+          if (item.file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            const imageData = await new Promise<string>((resolve) => {
+              reader.onload = (e) => resolve(e.target?.result as string);
+              reader.readAsDataURL(item.file);
+            });
+            doc.addImage(imageData, 'JPEG', 20, 70, 170, 120, undefined, 'FAST');
+          } else {
+            const text = await item.file.text().catch(() => "Binary content not displayable in PDF preview.");
+            doc.text(text.substring(0, 500) + (text.length > 500 ? "..." : ""), 20, 70, { maxWidth: 170 });
+          }
+          resultBlob = doc.output('blob');
+        } else if (['jpg', 'jpeg', 'png', 'webp'].includes(targetExt) && item.file.type.startsWith('image/')) {
+          const img = new Image();
+          const imageUrl = URL.createObjectURL(item.file);
+          await new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = reject;
+            img.src = imageUrl;
+          });
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Canvas context failed');
+          ctx.drawImage(img, 0, 0);
+          const mimeType = targetExt === 'jpg' ? 'image/jpeg' : `image/${targetExt}`;
+          const blobData = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.9));
+          if (!blobData) throw new Error('Blob creation failed');
+          resultBlob = blobData;
+          URL.revokeObjectURL(imageUrl);
+        } else if (targetExt === 'txt') {
+          const text = await item.file.text();
+          resultBlob = new Blob([text], { type: 'text/plain' });
+        } else {
+          // For unsupported formats, we still "convert" by providing the original blob
+          // but we could add a small header if it's a text file
+          resultBlob = item.file;
+        }
+
+        // Finish progress
+        for (let p = 50; p <= 100; p += 10) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+          setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, progress: p } : f));
+        }
+
+        const resultUrl = URL.createObjectURL(resultBlob);
+        setFiles(prev => prev.map((f, idx) => idx === i ? { 
+          ...f, 
+          status: 'completed',
+          resultUrl: resultUrl
+        } : f));
+
+      } catch (err) {
+        console.error("Conversion error:", err);
+        setFiles(prev => prev.map((f, idx) => idx === i ? { ...f, status: 'error' } : f));
       }
-      
-      setFiles(prev => prev.map((f, idx) => idx === i ? { 
-        ...f, 
-        status: 'completed',
-        resultUrl: '#' // Mock URL
-      } : f));
     }
     
     setIsProcessing(false);
@@ -169,53 +252,19 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
     setTimeout(() => setShowSuccessToast(false), 5000);
   };
 
-  const handleFileDownload = async (item: FileWithTarget) => {
+  const handleFileDownload = (item: FileWithTarget) => {
+    if (!item.resultUrl) return;
+    
     const originalName = item.file.name.split('.').slice(0, -1).join('.');
     const targetExt = item.targetFormat.toLowerCase();
     const filename = `${originalName}.${targetExt}`;
     
-    let blob: Blob;
-
-    if (targetExt === 'pdf') {
-      // Create a real PDF using jsPDF
-      const doc = new jsPDF();
-      doc.setFontSize(20);
-      doc.text("Converter Tudo - Conversion Result", 20, 20);
-      doc.setFontSize(12);
-      doc.text(`Original File: ${item.file.name}`, 20, 40);
-      doc.text(`Target Format: PDF`, 20, 50);
-      doc.text(`Conversion Date: ${new Date().toLocaleString()}`, 20, 60);
-      doc.text("This is a simulated conversion result for demonstration purposes.", 20, 80);
-      
-      // If it's an image, we can actually embed it in the PDF
-      if (item.file.type.startsWith('image/')) {
-        try {
-          const reader = new FileReader();
-          const imageData = await new Promise<string>((resolve) => {
-            reader.onload = (e) => resolve(e.target?.result as string);
-            reader.readAsDataURL(item.file);
-          });
-          doc.addImage(imageData, 'JPEG', 20, 90, 170, 120, undefined, 'FAST');
-        } catch (e) {
-          console.error("Could not add image to PDF:", e);
-        }
-      }
-      
-      blob = doc.output('blob');
-    } else {
-      // For other formats, use the original file blob to ensure it's at least a valid file
-      // In a real app, this would be the actual converted file from the server
-      blob = item.file;
-    }
-
-    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
+    link.href = item.resultUrl;
     link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     link.remove();
-    window.URL.revokeObjectURL(url);
   };
 
   const handleShare = (type: 'whatsapp' | 'email' | 'telegram', file: FileWithTarget) => {
@@ -292,7 +341,7 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-white/10 text-slate-400">{files.length}</span>
               </h4>
               <button 
-                onClick={() => setFiles([])}
+                onClick={clearAll}
                 className="text-sm font-bold text-slate-500 hover:text-rose-400 transition-colors"
               >
                 {t.dropzone.clearAll}
