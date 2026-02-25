@@ -1,19 +1,34 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap,
   ShieldCheck, 
   Globe, 
-  Download,
-  Monitor,
-  Smartphone as MobileIcon,
   X,
   ArrowRight,
-  Search
+  Search,
+  Cloud,
+  Layers,
+  Cpu,
+  Lock,
+  Workflow,
+  History,
+  Code,
+  Smartphone,
+  FileText,
+  Combine,
+  Scissors,
+  Minimize2,
+  PenTool,
+  FileEdit,
+  Camera,
+  Image as ImageIcon,
+  Plus
 } from 'lucide-react';
 import { LogoIcon } from '../components/LogoIcon';
 import { FileDropzone, FileDropzoneHandle } from '../components/FileDropzone';
+import { CameraScanner } from '../components/CameraScanner';
 import { CategoryCard } from '../components/CategoryCard';
 import { CATEGORIES } from '../constants';
 import { cn } from '../utils';
@@ -22,23 +37,18 @@ import { useLanguage } from '../LanguageContext';
 export default function Home() {
   const { t } = useLanguage();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
-  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [showAllConvertersModal, setShowAllConvertersModal] = useState(false);
+  const [showFeatureModal, setShowFeatureModal] = useState<{title: string, desc: string, type?: string} | null>(null);
+  const [activeTool, setActiveTool] = useState<{title: string, mode: 'merge' | 'split' | 'compress' | 'sign' | 'edit' | 'default', category: string} | null>(null);
+  const [showCameraScanner, setShowCameraScanner] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [recentFiles, setRecentFiles] = useState<{name: string, date: string}[]>([]);
   const dropzoneRef = useRef<FileDropzoneHandle>(null);
 
-  const handleDownload = (type: 'pc' | 'apk') => {
-    const filename = type === 'pc' ? 'ConverterTudo-Setup.exe' : 'ConverterTudo.apk';
-    const blob = new Blob(['Mock binary content for ' + filename], { type: 'application/octet-stream' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  };
+  useEffect(() => {
+    const saved = localStorage.getItem('converter_history');
+    if (saved) setRecentFiles(JSON.parse(saved));
+  }, []);
 
   const triggerUpload = () => {
     dropzoneRef.current?.open();
@@ -66,50 +76,119 @@ export default function Home() {
                 {t.hero.badge}
               </span>
               <h1 
-                onClick={triggerUpload}
-                className="text-5xl md:text-8xl font-extrabold tracking-tight text-white mb-8 leading-[1.1] cursor-pointer hover:opacity-90 transition-opacity"
+                className="text-6xl md:text-9xl font-extrabold tracking-tight text-white mb-8 leading-[1.1]"
               >
-                {t.hero.title} <br />
-                <span className="gradient-text">{t.hero.titleAccent}</span>
+                Convert <span className="gradient-text">everything</span>
               </h1>
+              
+              {/* Search Bar - Inspired by the "white box" in screenshot */}
+              <div className="max-w-2xl mx-auto mb-12 relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-brand-primary/20 to-blue-500/20 rounded-[2rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative flex items-center bg-white/5 border border-white/10 rounded-[2rem] p-2 backdrop-blur-xl">
+                  <Search className="ml-6 text-slate-500" size={24} />
+                  <input 
+                    type="text"
+                    placeholder="O que deseja converter hoje?"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1 bg-transparent border-none outline-none px-6 py-4 text-white text-lg placeholder:text-slate-500"
+                  />
+                  <button 
+                    onClick={() => setShowAllConvertersModal(true)}
+                    className="btn-primary px-8 rounded-[1.5rem]"
+                  >
+                    Procurar
+                  </button>
+                </div>
+              </div>
+
               <p 
-                onClick={triggerUpload}
-                className="text-lg md:text-xl text-slate-400 leading-relaxed mb-12 max-w-2xl mx-auto cursor-pointer hover:text-slate-300 transition-colors"
+                className="text-lg md:text-xl text-slate-400 leading-relaxed mb-12 max-w-2xl mx-auto"
               >
-                {t.hero.subtitle}
+                Converter Tudo is a free online platform that allows you to convert units quickly, simply and accurately.
               </p>
               
               <div className="flex flex-wrap items-center justify-center gap-4 mb-16">
-                <button 
-                  onClick={() => setShowDownloadModal(true)}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  <Download size={20} />
-                  {t.hero.downloadBtn}
-                </button>
-                <button 
-                  onClick={triggerUpload}
-                  className="btn-secondary"
-                >
-                  {t.hero.exploreBtn}
-                </button>
+                {/* Explore Tools removed as requested */}
               </div>
             </motion.div>
           </div>
 
+          {/* Features Grid */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="relative z-10"
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto"
           >
-            <div className="glass-dark rounded-[2.5rem] p-4 md:p-8">
-              <FileDropzone 
-                onFilesSelected={(files) => console.log('Files:', files)} 
-                selectedCategoryId={selectedCategoryId}
-                ref={dropzoneRef}
-              />
-            </div>
+            {[
+              { 
+                icon: <Combine className="text-emerald-400" />, 
+                title: "Juntar PDF", 
+                desc: "Mesclar e juntar PDFs e colocá-los em qualquer ordem que desejar. É tudo muito fácil e rápido!",
+                action: () => setActiveTool({ title: "Juntar PDF", mode: 'merge', category: 'document' })
+              },
+              { 
+                icon: <Scissors className="text-blue-400" />, 
+                title: "Dividir PDF", 
+                desc: "Selecione um intervalo de páginas, separe uma página, ou converta cada página do arquivo em PDF independente.",
+                action: () => setActiveTool({ title: "Dividir PDF", mode: 'split', category: 'document' })
+              },
+              { 
+                icon: <Minimize2 className="text-purple-400" />, 
+                title: "Comprimir PDF", 
+                desc: "Diminua o tamanho do seu arquivo PDF, mantendo a melhor qualidade possível. Otimize seus arquivos PDF.",
+                action: () => setActiveTool({ title: "Comprimir PDF", mode: 'compress', category: 'document' })
+              },
+              { 
+                icon: <PenTool className="text-rose-400" />, 
+                title: "Assinar PDF", 
+                desc: "Assine você mesmo ou solicite assinaturas eletrônicas de outros com segurança.",
+                action: () => setActiveTool({ title: "Assinar PDF", mode: 'sign', category: 'document' })
+              },
+              { 
+                icon: <FileEdit className="text-amber-400" />, 
+                title: "Editar PDF", 
+                desc: "Adicione texto, imagens, formas ou anotações livres a um documento PDF. Edite dimensão, fonte e cor.",
+                action: () => setActiveTool({ title: "Editar PDF", mode: 'edit', category: 'document' })
+              },
+              { 
+                icon: <ImageIcon className="text-indigo-400" />, 
+                title: "Comprimir Foto", 
+                desc: "Reduza o tamanho das suas imagens sem perder qualidade visível usando algoritmos de compressão inteligente.",
+                action: () => setActiveTool({ title: "Comprimir Foto", mode: 'compress', category: 'image' })
+              },
+              { 
+                icon: <Camera className="text-cyan-400" />, 
+                title: "Digitalizar para PDF", 
+                desc: "Capture digitalizações a partir do seu dispositivo móvel e converta-as instantaneamente em PDF.",
+                action: () => setShowCameraScanner(true)
+              },
+              { 
+                icon: <History className="text-lime-400" />, 
+                title: "Histórico", 
+                desc: "Aceda rapidamente às suas conversões recentes e recupere ficheiros processados.",
+                action: () => setShowFeatureModal({ 
+                  title: "Histórico de Ficheiros", 
+                  type: 'history',
+                  desc: recentFiles.length > 0 
+                    ? "Aqui estão os seus ficheiros processados recentemente." 
+                    : "Ainda não converteu nenhum ficheiro nesta sessão." 
+                })
+              }
+            ].map((feature, i) => (
+              <div 
+                key={i} 
+                onClick={feature.action}
+                className="glass-dark p-8 rounded-[2rem] border border-white/5 hover:border-brand-primary/30 transition-all group cursor-pointer hover:bg-white/[0.02]"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                  {feature.icon}
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+                <p className="text-sm text-slate-400 leading-relaxed">{feature.desc}</p>
+              </div>
+            ))}
           </motion.div>
 
           {/* Trust Badges */}
@@ -129,6 +208,39 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+
+          {/* Separate Dropzones Section */}
+          <div className="mt-32">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-5xl font-bold text-white mb-4">Conversores Rápidos</h2>
+              <p className="text-slate-400">Arraste os seus ficheiros diretamente para a categoria desejada.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[
+                { id: 'image', label: 'Imagens', color: 'text-emerald-400' },
+                { id: 'audio', label: 'Áudio', color: 'text-blue-400' },
+                { id: 'video', label: 'Vídeo', color: 'text-rose-400' },
+                { id: 'document', label: 'Documentos', color: 'text-amber-400' }
+              ].map((cat) => (
+                <div key={cat.id} className="space-y-4">
+                  <div className="flex items-center justify-between px-4">
+                    <h3 className={cn("text-xl font-bold flex items-center gap-2", cat.color)}>
+                      <div className="w-2 h-2 rounded-full bg-current" />
+                      {cat.label}
+                    </h3>
+                  </div>
+                  <div className="glass-dark rounded-[2rem] p-4 border border-white/5 hover:border-white/10 transition-all">
+                    <FileDropzone 
+                      onFilesSelected={() => {}} 
+                      selectedCategoryId={cat.id}
+                      compact
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Home Page Content */}
@@ -198,68 +310,140 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Download Modal */}
+      {/* Floating Action Button for Scan */}
+      <div className="fixed bottom-8 right-8 z-40">
+        <motion.button
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => setShowCameraScanner(true)}
+          className="w-16 h-16 bg-brand-primary text-bg-darker rounded-full flex items-center justify-center shadow-2xl shadow-brand-primary/40 group relative"
+        >
+          <Camera size={28} />
+          <div className="absolute right-full mr-4 px-4 py-2 bg-white text-bg-darker rounded-xl text-sm font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+            Digitalizar Documento
+          </div>
+        </motion.button>
+      </div>
+
+      {/* Active Tool Modal */}
       <AnimatePresence>
-        {showDownloadModal && (
+        {activeTool && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowDownloadModal(false)}
+              onClick={() => setActiveTool(null)}
               className="absolute inset-0 bg-bg-darker/80 backdrop-blur-sm"
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-2xl glass-dark rounded-[2.5rem] p-8 md:p-12 border border-white/10"
+              className="relative w-full max-w-4xl glass-dark rounded-[2.5rem] p-8 md:p-12 border border-white/10 flex flex-col max-h-[90vh] overflow-hidden"
             >
               <button 
-                onClick={() => setShowDownloadModal(false)}
+                onClick={() => setActiveTool(null)}
+                className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white transition-colors z-10"
+              >
+                <X size={24} />
+              </button>
+
+              <div className="mb-8">
+                <h2 className="text-3xl font-bold text-white mb-2">{activeTool.title}</h2>
+                <p className="text-slate-400">Arraste os seus ficheiros para começar a {activeTool.title.toLowerCase()}.</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <FileDropzone 
+                  onFilesSelected={() => {}} 
+                  selectedCategoryId={activeTool.category}
+                  mode={activeTool.mode}
+                />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Camera Scanner Modal */}
+      <CameraScanner 
+        isOpen={showCameraScanner} 
+        onClose={() => setShowCameraScanner(false)}
+        onSave={(blob, name) => {
+          // Save to history when a scan is completed
+          const historyItem = { name, date: new Date().toLocaleString() };
+          const existingHistory = JSON.parse(localStorage.getItem('converter_history') || '[]');
+          const newHistory = [historyItem, ...existingHistory].slice(0, 20);
+          localStorage.setItem('converter_history', JSON.stringify(newHistory));
+          setRecentFiles(newHistory);
+
+          // Trigger download
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = name;
+          link.click();
+          URL.revokeObjectURL(url);
+        }}
+      />
+
+      {/* Feature Modal */}
+      <AnimatePresence>
+        {showFeatureModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowFeatureModal(null)}
+              className="absolute inset-0 bg-bg-darker/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg glass-dark rounded-[2.5rem] p-8 md:p-12 border border-white/10 text-center"
+            >
+              <button 
+                onClick={() => setShowFeatureModal(null)}
                 className="absolute top-6 right-6 p-2 text-slate-400 hover:text-white transition-colors"
               >
                 <X size={20} />
               </button>
 
-              <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-white mb-4">{t.download.title}</h2>
-                <p className="text-slate-400 text-lg">{t.download.subtitle}</p>
+              <div className="w-20 h-20 bg-brand-primary/10 text-brand-primary rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <Zap size={40} />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-brand-primary/30 transition-all group">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <Monitor size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">{t.download.desktopTitle}</h3>
-                  <p className="text-slate-400 mb-8">{t.download.desktopDesc}</p>
-                  <button 
-                    onClick={() => handleDownload('pc')}
-                    className="w-full btn-primary"
-                  >
-                    {t.download.desktopBtn}
-                  </button>
+              <h2 className="text-3xl font-bold text-white mb-4">{showFeatureModal.title}</h2>
+              
+              {showFeatureModal.type === 'history' ? (
+                <div className="space-y-3 mb-8 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                  {recentFiles.length > 0 ? recentFiles.map((file, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <History size={18} className="text-indigo-400" />
+                        <span className="text-sm font-medium text-white">{file.name}</span>
+                      </div>
+                      <span className="text-[10px] text-slate-500">{file.date}</span>
+                    </div>
+                  )) : (
+                    <p className="text-slate-500 py-8 italic">{showFeatureModal.desc}</p>
+                  )}
                 </div>
-                <div className="p-8 rounded-3xl bg-white/5 border border-white/10 hover:border-brand-primary/30 transition-all group">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-primary/10 text-brand-primary flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                    <MobileIcon size={32} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-2">{t.download.mobileTitle}</h3>
-                  <p className="text-slate-400 mb-8">{t.download.mobileDesc}</p>
-                  <button 
-                    onClick={() => handleDownload('apk')}
-                    className="w-full btn-secondary"
-                  >
-                    {t.download.mobileBtn}
-                  </button>
-                </div>
-              </div>
+              ) : (
+                <p className="text-slate-400 text-lg leading-relaxed mb-8">
+                  {showFeatureModal.desc}
+                </p>
+              )}
 
-              <div className="mt-10 p-6 rounded-2xl bg-brand-primary/5 border border-brand-primary/10 text-center">
-                <p className="text-brand-primary text-sm font-bold uppercase tracking-widest">{t.download.proTip}</p>
-                <p className="text-slate-300 mt-2">{t.download.proTipDesc}</p>
-              </div>
+              <button 
+                onClick={() => setShowFeatureModal(null)}
+                className="btn-primary w-full"
+              >
+                {showFeatureModal.type === 'history' ? "Fechar" : "Entendido"}
+              </button>
             </motion.div>
           </div>
         )}

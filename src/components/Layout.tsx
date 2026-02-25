@@ -173,11 +173,11 @@ export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen flex flex-col bg-bg-darker selection:bg-brand-primary/30">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 glass border-b border-white/5">
+      <nav className="sticky top-0 z-50 bg-bg-darker/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform border border-white/10">
+              <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform border border-brand-primary/20">
                 <LogoIcon size={24} />
               </div>
               <span className="text-xl font-bold tracking-tight text-white">Converter Tudo</span>
@@ -185,17 +185,17 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Desktop Nav */}
             <div className="hidden md:flex items-center gap-8">
-              <Link to="/" className={cn("text-sm font-medium transition-colors", location.pathname === "/" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.home}</Link>
-              <Link to="/converters" className={cn("text-sm font-medium transition-colors", location.pathname === "/converters" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.converters}</Link>
-              <Link to="/about" className={cn("text-sm font-medium transition-colors", location.pathname === "/about" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.about}</Link>
-              <Link to="/contact" className={cn("text-sm font-medium transition-colors", location.pathname === "/contact" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.contact}</Link>
-              <Link to="/blog" className={cn("text-sm font-medium transition-colors", location.pathname === "/blog" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.blog}</Link>
+              <Link to="/" className={cn("text-sm font-semibold transition-colors", location.pathname === "/" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.home}</Link>
+              <Link to="/converters" className={cn("text-sm font-semibold transition-colors", location.pathname === "/converters" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.converters}</Link>
+              <Link to="/about" className={cn("text-sm font-semibold transition-colors", location.pathname === "/about" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.about}</Link>
+              <Link to="/contact" className={cn("text-sm font-semibold transition-colors", location.pathname === "/contact" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.contact}</Link>
+              <Link to="/blog" className={cn("text-sm font-semibold transition-colors", location.pathname === "/blog" ? "text-brand-primary" : "text-slate-400 hover:text-white")}>{t.nav.blog}</Link>
               
               {/* Language Selector */}
               <div className="relative">
                 <button 
                   onClick={() => setShowLangDropdown(!showLangDropdown)}
-                  className="flex items-center gap-2 text-sm font-medium text-slate-400 hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-sm font-semibold text-slate-400 hover:text-white transition-colors"
                 >
                   <Globe size={16} />
                   {language}
