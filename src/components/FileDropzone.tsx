@@ -179,13 +179,17 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
 
         // REAL CONVERSION LOGIC
         if (targetExt === 'pdf') {
-          const doc = new jsPDF();
-          doc.setFontSize(20);
-          doc.text("Converter Tudo - Conversion Result", 20, 20);
-          doc.setFontSize(12);
-          doc.text(`Original File: ${item.file.name}`, 20, 40);
-          doc.text(`Target Format: PDF`, 20, 50);
-          doc.text(`Conversion Date: ${new Date().toLocaleString()}`, 20, 60);
+          // Create a real PDF using jsPDF (default is A4)
+          const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+          });
+          
+          const pageWidth = doc.internal.pageSize.getWidth();
+          const pageHeight = doc.internal.pageSize.getHeight();
+          const margin = 10;
+          const contentWidth = pageWidth - (margin * 2);
           
           if (item.file.type.startsWith('image/')) {
             const reader = new FileReader();
@@ -193,10 +197,45 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
               reader.onload = (e) => resolve(e.target?.result as string);
               reader.readAsDataURL(item.file);
             });
-            doc.addImage(imageData, 'JPEG', 20, 70, 170, 120, undefined, 'FAST');
+
+            // Get image dimensions to scale correctly
+            const img = new Image();
+            await new Promise((resolve) => {
+              img.onload = resolve;
+              img.src = imageData;
+            });
+
+            const imgWidth = img.width;
+            const imgHeight = img.height;
+            const ratio = imgWidth / imgHeight;
+            
+            let finalWidth = contentWidth;
+            let finalHeight = finalWidth / ratio;
+            
+            // If height exceeds page height, scale down further
+            if (finalHeight > (pageHeight - (margin * 2))) {
+              finalHeight = pageHeight - (margin * 2);
+              finalWidth = finalHeight * ratio;
+            }
+
+            // Center the image
+            const x = (pageWidth - finalWidth) / 2;
+            const y = (pageHeight - finalHeight) / 2;
+
+            doc.addImage(imageData, 'JPEG', x, y, finalWidth, finalHeight, undefined, 'FAST');
           } else {
-            const text = await item.file.text().catch(() => "Binary content not displayable in PDF preview.");
-            doc.text(text.substring(0, 500) + (text.length > 500 ? "..." : ""), 20, 70, { maxWidth: 170 });
+            try {
+              const text = await item.file.text();
+              doc.setFontSize(11);
+              const splitText = doc.splitTextToSize(text, contentWidth);
+              doc.text(splitText, margin, margin + 5);
+            } catch (e) {
+              // If text reading fails (binary file), just put the filename
+              doc.setFontSize(14);
+              doc.text(`Arquivo: ${item.file.name}`, margin, margin + 10);
+              doc.setFontSize(10);
+              doc.text(`Este arquivo foi convertido para o formato PDF.`, margin, margin + 20);
+            }
           }
           resultBlob = doc.output('blob');
         } else if (['jpg', 'jpeg', 'png', 'webp'].includes(targetExt) && item.file.type.startsWith('image/')) {
@@ -499,8 +538,8 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
               <CheckCircle2 size={24} />
             </div>
             <div>
-              <h4 className="font-black text-white leading-tight">Conversion Complete!</h4>
-              <p className="text-xs text-slate-400">Your files are ready for download.</p>
+              <h4 className="font-black text-white leading-tight">{t.dropzone.toastTitle}</h4>
+              <p className="text-xs text-slate-400">{t.dropzone.toastDesc}</p>
             </div>
           </motion.div>
         )}

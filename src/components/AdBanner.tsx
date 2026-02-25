@@ -27,8 +27,8 @@ export function AdBanner() {
   }, []);
 
   return (
-    <div className="flex justify-center py-8 bg-bg-darker/50 border-y border-white/5">
-      <div ref={bannerRef} className="min-h-[60px] min-w-[468px]"></div>
+    <div className="flex justify-center py-8 bg-bg-darker/50 border-y border-white/5 overflow-x-auto">
+      <div ref={bannerRef} className="min-h-[60px] w-full max-w-[468px] flex justify-center"></div>
     </div>
   );
 }

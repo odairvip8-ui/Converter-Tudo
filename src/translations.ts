@@ -284,6 +284,8 @@ export const translations = {
       convertNow: "Convert Now",
       processing: "Processing Files...",
       complete: "Conversion Complete",
+      toastTitle: "Conversion Complete!",
+      toastDesc: "Your files are ready for download.",
     },
     categories: {
       audio: { name: "Audio Converter", desc: "Versatile online audio converter for common formats." },
@@ -583,6 +585,8 @@ export const translations = {
       convertNow: "Converter Agora",
       processing: "Processando Arquivos...",
       complete: "Conversão Concluída",
+      toastTitle: "Conversão Concluída!",
+      toastDesc: "Os seus arquivos estão prontos para baixar.",
     },
     categories: {
       audio: { name: "Conversor de Áudio", desc: "Conversor de áudio online versátil para formatos comuns." },
@@ -882,6 +886,8 @@ export const translations = {
       convertNow: "Convertir Ahora",
       processing: "Procesando Archivos...",
       complete: "Conversión Completada",
+      toastTitle: "¡Conversión Completada!",
+      toastDesc: "Tus archivos están listos para descargar.",
     },
     categories: {
       audio: { name: "Conversor de Audio", desc: "Conversor de audio online versátil para formatos comunes." },
