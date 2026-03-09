@@ -3,6 +3,8 @@ import { useDropzone } from 'react-dropzone';
 import { jsPDF } from 'jspdf';
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 import JSZip from 'jszip';
+import { SignatureModal } from './SignatureModal';
+import { PdfSigner } from './PdfSigner';
 import { 
   Upload, 
   X, 
@@ -17,7 +19,8 @@ import {
   ChevronDown,
   ArrowRight,
   FileArchive,
-  Layers
+  Layers,
+  PenTool
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../utils';
@@ -50,6 +53,10 @@ interface FileWithTarget {
   previewUrl?: string;
   availableFormats: string[];
   progress: number;
+  signature?: {
+    text: string;
+    font: string;
+  };
 }
 
 export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({ onFilesSelected, selectedCategoryId, compact, mode = 'default' }, ref) => {
@@ -58,6 +65,8 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState<number | null>(null);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+  const [signingFileIndex, setSigningFileIndex] = useState<number | null>(null);
+  const [visualSigningIndex, setVisualSigningIndex] = useState<number | null>(null);
 
   const getAvailableFormats = (fileName: string) => {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
@@ -366,14 +375,45 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
           const pdfDoc = await PDFDocument.load(pdfBytes);
           const pages = pdfDoc.getPages();
           const firstPage = pages[0];
-          const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-          firstPage.drawText('Assinado Digitalmente', {
-            x: 50,
-            y: 50,
-            size: 12,
-            font: font,
-            color: rgb(0, 0, 0.5),
-          });
+          
+          if (item.signature) {
+            // Create a canvas to render the signature with the selected font
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 100;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              ctx.fillStyle = 'black';
+              ctx.font = `48px "${item.signature.font}"`;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+              ctx.fillText(item.signature.text, canvas.width / 2, canvas.height / 2);
+              
+              const signatureDataUrl = canvas.toDataURL('image/png');
+              const signatureImage = await pdfDoc.embedPng(signatureDataUrl);
+              
+              // Draw signature at the bottom right
+              const sigWidth = 150;
+              const sigHeight = (sigWidth / canvas.width) * canvas.height;
+              firstPage.drawImage(signatureImage, {
+                x: firstPage.getWidth() - sigWidth - 50,
+                y: 50,
+                width: sigWidth,
+                height: sigHeight,
+              });
+            }
+          } else {
+            // Fallback if no signature was provided
+            const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            firstPage.drawText('Assinado Digitalmente', {
+              x: 50,
+              y: 50,
+              size: 12,
+              font: font,
+              color: rgb(0, 0, 0.5),
+            });
+          }
           const signedBytes = await pdfDoc.save();
           resultBlob = new Blob([signedBytes], { type: 'application/pdf' });
         } else if (mode === 'edit' && item.file.type === 'application/pdf') {
@@ -676,6 +716,29 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {item.status === 'pending' && mode === 'sign' && (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setSigningFileIndex(index)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all shadow-lg ${
+                          item.signature 
+                            ? 'bg-brand-primary/20 text-brand-primary border border-brand-primary/30' 
+                            : 'bg-brand-primary text-bg-darker hover:scale-105 shadow-brand-primary/20'
+                        }`}
+                      >
+                        <PenTool size={14} />
+                        {item.signature ? 'Assinatura Pronta' : 'Assinatura Rápida'}
+                      </button>
+                      <button 
+                        onClick={() => setVisualSigningIndex(index)}
+                        className="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black bg-rose-500 text-white hover:scale-105 transition-all shadow-lg shadow-rose-500/20"
+                      >
+                        <Layers size={14} />
+                        Assinar no Doc
+                      </button>
+                    </div>
+                  )}
+
                   {item.status === 'pending' && mode === 'default' && (
                     <div className="flex items-center gap-3 bg-white/5 rounded-2xl px-4 py-2 border border-white/5">
                       <div className="flex flex-col">
@@ -839,6 +902,40 @@ export const FileDropzone = forwardRef<FileDropzoneHandle, FileDropzoneProps>(({
           </motion.div>
         )}
       </AnimatePresence>
+
+      <SignatureModal 
+        isOpen={signingFileIndex !== null}
+        onClose={() => setSigningFileIndex(null)}
+        onConfirm={(signature) => {
+          if (signingFileIndex !== null) {
+            setFiles(prev => prev.map((f, i) => i === signingFileIndex ? { ...f, signature } : f));
+          }
+        }}
+      />
+
+      {visualSigningIndex !== null && (
+        <PdfSigner 
+          isOpen={true}
+          file={files[visualSigningIndex].file}
+          onClose={() => setVisualSigningIndex(null)}
+          onSave={(blob) => {
+            if (visualSigningIndex !== null) {
+              const url = URL.createObjectURL(blob);
+              setFiles(prev => prev.map((f, i) => i === visualSigningIndex ? { 
+                ...f, 
+                status: 'completed', 
+                resultUrl: url,
+                progress: 100 
+              } : f));
+              
+              const historyItem = { name: `assinado_${files[visualSigningIndex].file.name}`, date: new Date().toLocaleString() };
+              const existingHistory = JSON.parse(localStorage.getItem('converter_history') || '[]');
+              localStorage.setItem('converter_history', JSON.stringify([historyItem, ...existingHistory].slice(0, 20)));
+            }
+          }}
+        />
+      )}
+
       <AnimatePresence>
         {showSuccessToast && (
           <motion.div
